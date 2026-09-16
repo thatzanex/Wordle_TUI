@@ -1,0 +1,23 @@
+{
+  "Language": "de",
+  "PlayerName": "",
+  "Difficulty": "Normal",
+  "GameSettings": {
+    "MaxAttempts": 6,
+    "WordLength": 5
+  },
+  "Theme": {
+    "ColorCorrect": "green",
+    "ColorPresent": "orange3",
+    "ColorAbsent": "grey37",
+    "ColorEmpty": "grey15",
+    "AsciiTitleColor": "orange3"
+  },
+  "ApiEndpoints": {
+    "RandomWord": "https://random-word-api.herokuapp.com/word",
+    "DictionaryValidation": "https://api.dictionaryapi.dev/api/v2/entries",
+    "ValidateGuesses": true,
+    "RequestTimeoutSeconds": 6,
+    "ValidationTimeoutSeconds": 1.5
+  }
+}
