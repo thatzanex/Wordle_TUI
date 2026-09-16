@@ -15,6 +15,13 @@ public class GameConfig
     /// <summary>Language code of the interface, for example "de" or "en".</summary>
     public string Language { get; set; } = "de";
 
+    /// <summary>
+    /// Language code of the target word and the dictionary used to validate it, for
+    /// example "de" or "en". Independent of <see cref="Language"/>, so the interface
+    /// and the word being guessed do not have to match.
+    /// </summary>
+    public string WordLanguage { get; set; } = "de";
+
     /// <summary>Name of the player, asked once on the first start.</summary>
     public string PlayerName { get; set; } = string.Empty;
 
@@ -52,6 +59,7 @@ public class GameConfig
         return new GameConfig
         {
             Language = Language,
+            WordLanguage = WordLanguage,
             PlayerName = PlayerName,
             Difficulty = Difficulty,
             GameSettings = new GameSettings
@@ -87,6 +95,7 @@ public class GameConfig
     public void CopyFrom(GameConfig other)
     {
         Language = other.Language;
+        WordLanguage = other.WordLanguage;
         PlayerName = other.PlayerName;
         Difficulty = other.Difficulty;
 

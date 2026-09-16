@@ -849,16 +849,19 @@ public class FrontendRenderer
         return table;
     }
 
-    // The line under the board: difficulty, elapsed time and guesses used.
+    // The line under the board: difficulty, elapsed time, guesses used and the
+    // language of the word being guessed.
     private IRenderable BuildStatusLine(BoardView view)
     {
         var difficulty = localizer.Get(DifficultyRules.For(view.Level).NameKey);
         var separator = $"[{config.Theme.ColorEmpty}]  -  [/]";
+        var wordLanguage = Escape(view.WordLanguage.ToUpperInvariant());
 
         var status =
             $"[{config.Theme.ColorAbsent}]{Escape(difficulty)}[/]{separator}" +
             $"[{config.Theme.ColorAbsent}]{FormatDuration(view.Elapsed)}[/]{separator}" +
-            $"[{config.Theme.ColorAbsent}]{view.Guesses.Count}/{view.AttemptsAllowed}[/]";
+            $"[{config.Theme.ColorAbsent}]{view.Guesses.Count}/{view.AttemptsAllowed}[/]{separator}" +
+            $"[bold {config.Theme.ColorPresent}]{wordLanguage}[/]";
 
         return new Markup(status).Centered();
     }

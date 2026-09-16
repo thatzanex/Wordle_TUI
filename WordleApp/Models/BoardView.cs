@@ -13,6 +13,7 @@ namespace WordleApp.Models;
 /// <param name="KeyboardStates">Best state seen so far per letter, for the on-screen keyboard.</param>
 /// <param name="Elapsed">How long the round has been running.</param>
 /// <param name="Level">The difficulty being played.</param>
+/// <param name="WordLanguage">Language code of the word being guessed, for example "de".</param>
 /// <param name="ShimmerFrame">
 /// Animation step while the guess is being checked: the active row is drawn as a
 /// grey wave running left to right, one shade further with every frame.
@@ -26,6 +27,7 @@ public readonly record struct BoardView(
     IReadOnlyDictionary<char, LetterState> KeyboardStates,
     TimeSpan Elapsed,
     Difficulty Level,
+    string WordLanguage,
     int ShimmerFrame = -1)
 {
     /// <summary>True while the guess in the active row is being checked.</summary>

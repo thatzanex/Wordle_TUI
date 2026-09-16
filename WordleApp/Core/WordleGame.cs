@@ -76,11 +76,11 @@ public class WordleGame
 
         // The pool usually has a word ready, so the round starts instantly. Only an
         // empty pool waits for the network, and only that wait gets a spinner.
-        if (!words.TryTake(wordLength, config.Language, out var target))
+        if (!words.TryTake(wordLength, config.WordLanguage, out var target))
         {
             target = renderer.RunWithStatus(
                 "status.fetchingWord",
-                () => words.Take(wordLength, config.Language));
+                () => words.Take(wordLength, config.WordLanguage));
 
             input.SyncWindowSize();
         }
@@ -225,7 +225,7 @@ public class WordleGame
         {
             isValid = renderer.RunWhileCheckingGuess(
                 view,
-                () => api.IsValidWordAsync(currentInput, config.Language));
+                () => api.IsValidWordAsync(currentInput, config.WordLanguage));
 
             input.SyncWindowSize();
         }
@@ -340,7 +340,7 @@ public class WordleGame
     }
 
     // Packs the round state into the snapshot the renderer works with.
-    private static BoardView BuildView(
+    private BoardView BuildView(
         IReadOnlyList<WordleGuess> guesses,
         string currentInput,
         int attemptsAllowed,
@@ -356,7 +356,8 @@ public class WordleGame
             message,
             new Dictionary<char, LetterState>(keyboardStates),
             elapsed,
-            level);
+            level,
+            config.WordLanguage);
     }
 
     // Shows a message until the player acknowledges it, redrawing it on resize.

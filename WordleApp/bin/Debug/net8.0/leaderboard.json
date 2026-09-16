@@ -1,14 +1,14 @@
 [
   {
     "Name": "Batu",
-    "GamesPlayed": 2,
+    "GamesPlayed": 3,
     "Wins": 2,
     "TotalPoints": 1838,
     "BestPoints": 1088,
     "TotalWinGuesses": 11,
     "BestTimeSeconds": 162,
-    "CurrentStreak": 2,
+    "CurrentStreak": 0,
     "BestStreak": 2,
-    "LastPlayed": "2026-08-27"
+    "LastPlayed": "2026-09-16"
   }
 ]

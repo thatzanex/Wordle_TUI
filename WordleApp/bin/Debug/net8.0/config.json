@@ -1,7 +1,7 @@
 {
   "Language": "de",
   "PlayerName": "Batu",
-  "Difficulty": "Easy",
+  "Difficulty": "Normal",
   "GameSettings": {
     "MaxAttempts": 6,
     "WordLength": 5

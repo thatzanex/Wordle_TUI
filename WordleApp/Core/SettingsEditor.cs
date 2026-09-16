@@ -166,6 +166,13 @@ public class SettingsEditor
                 null),
 
             new SettingItem(
+                "settings.wordLanguage",
+                () => localizer.GetLanguageName(config.WordLanguage),
+                () => null,
+                CycleWordLanguage,
+                null),
+
+            new SettingItem(
                 "settings.attempts",
                 () => config.GameSettings.MaxAttempts.ToString(),
                 () => null,
@@ -258,6 +265,23 @@ public class SettingsEditor
 
         config.Language = languages[next];
         localizer.SetLanguage(config.Language);
+    }
+
+    // Steps to the next word language. This only changes which language the target
+    // word and the dictionary use - the interface stays in whatever language
+    // CycleLanguage set, so the two can differ.
+    private void CycleWordLanguage(int direction)
+    {
+        var languages = localizer.AvailableLanguages;
+        if (languages.Count == 0)
+        {
+            return;
+        }
+
+        var current = languages.ToList().IndexOf(config.WordLanguage);
+        var next = ((current < 0 ? 0 : current) + direction + languages.Count) % languages.Count;
+
+        config.WordLanguage = languages[next];
     }
 
     // Steps through the palette, wrapping around at both ends. A colour that is not

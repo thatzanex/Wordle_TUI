@@ -69,6 +69,7 @@
   "settings.header": "EINSTELLUNGEN",
   "settings.playerName": "Spieler",
   "settings.language": "Sprache",
+  "settings.wordLanguage": "Wortsprache",
   "settings.validation": "Wörter prüfen",
   "settings.attempts": "Versuche",
   "settings.wordLength": "Wortlänge",

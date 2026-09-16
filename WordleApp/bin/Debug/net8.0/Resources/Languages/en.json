@@ -69,6 +69,7 @@
   "settings.header": "SETTINGS",
   "settings.playerName": "Player",
   "settings.language": "Language",
+  "settings.wordLanguage": "Word language",
   "settings.validation": "Check guesses",
   "settings.attempts": "Attempts",
   "settings.wordLength": "Word length",

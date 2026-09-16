@@ -96,7 +96,7 @@ public class AppShell
 
         // The first words are downloaded while the boot animation plays, so the
         // first round does not have to wait for them either.
-        words.WarmUp(config.GameSettings.WordLength, config.Language);
+        words.WarmUp(config.GameSettings.WordLength, config.WordLanguage);
 
         renderer.DrawLoadingScreen();
         input.SyncWindowSize();
@@ -192,8 +192,8 @@ public class AppShell
             case "menu.settings":
                 RunSettingsEditor();
 
-                // Word length or language may have changed, which needs a new batch.
-                words.WarmUp(config.GameSettings.WordLength, config.Language);
+                // Word length or word language may have changed, which needs a new batch.
+                words.WarmUp(config.GameSettings.WordLength, config.WordLanguage);
 
                 return true;
 

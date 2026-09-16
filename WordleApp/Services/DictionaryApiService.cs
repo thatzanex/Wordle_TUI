@@ -5,8 +5,8 @@ using WordleApp.Models;
 namespace WordleApp.Services;
 
 // === DICTIONARY API SERVICE ===
-// Talks to the two endpoints configured in config.json: one hands out target
-// words, the other says whether a guess is a real word.
+// Talks to the word and dictionary endpoints configured in config.json: one hands
+// out target words, the other says whether a guess is a real word.
 //
 // Both calls are treated as unreliable, and slow, on purpose:
 //
@@ -15,9 +15,14 @@ namespace WordleApp.Services;
 //    not know one - waiting that long after every guess is what made the game
 //    feel broken, so the wait is capped at a fraction of a second.
 //  * Validation fails open: only an explicit "not found" rejects a guess.
-//  * After a couple of timeouts in a row the dictionary is dropped for the rest
-//    of the session, so a dead endpoint stalls the game exactly twice and never
-//    again.
+//  * When the configured dictionary does not give a clear answer at all (down,
+//    erroring, timing out), the guess is checked against Wiktionary instead of
+//    being accepted outright - it runs on Wikimedia's infrastructure, which is
+//    far more reliable than the small free dictionary APIs this game otherwise
+//    depends on.
+//  * Only when that fallback also fails to answer, twice in a row, is validation
+//    dropped for the rest of the session - so a genuinely dead network stalls the
+//    game exactly twice and never again.
 //  * Answers are remembered, so the same word is never looked up twice.
 
 /// <summary>
@@ -144,7 +149,7 @@ public class DictionaryApiService
     /// <param name="word">The word to look up.</param>
     /// <param name="language">Language code of the dictionary, for example "en".</param>
     /// <returns>
-    /// False only when the dictionary explicitly reports the word as unknown.
+    /// False only when a dictionary explicitly reports the word as unknown.
     /// A disabled, unreachable or slow dictionary returns true, so nothing ever
     /// blocks the player for longer than the configured validation timeout.
     /// </returns>
@@ -162,6 +167,38 @@ public class DictionaryApiService
             return cached;
         }
 
+        var primary = await CheckPrimaryDictionaryAsync(word, language).ConfigureAwait(false);
+        if (primary is { } primaryResult)
+        {
+            consecutiveValidationFailures = 0;
+            validationCache[key] = primaryResult;
+
+            return primaryResult;
+        }
+
+        // The configured dictionary did not give a clear answer (down, erroring or
+        // timed out). Wiktionary runs on Wikimedia's infrastructure and rarely has
+        // the kind of outage the primary dictionary just had, so it gets a shot
+        // before the lookup counts as a failure.
+        var fallback = await CheckWiktionaryAsync(word, language).ConfigureAwait(false);
+        if (fallback is { } fallbackResult)
+        {
+            consecutiveValidationFailures = 0;
+            validationCache[key] = fallbackResult;
+
+            return fallbackResult;
+        }
+
+        RegisterValidationFailure(LastError ?? "Neither dictionary answered.");
+
+        return true;
+    }
+
+    // Asks the endpoint configured in config.json. Returns null - instead of
+    // failing open itself - when it could not give a clear answer, so the caller
+    // can try the Wiktionary fallback first.
+    private async Task<bool?> CheckPrimaryDictionaryAsync(string word, string language)
+    {
         try
         {
             using var timeout = new CancellationTokenSource(endpoints.ResolveValidationTimeout());
@@ -174,23 +211,76 @@ public class DictionaryApiService
             // the dictionary is having a bad day, not that the guess is wrong.
             if (response.StatusCode is HttpStatusCode.OK or HttpStatusCode.NotFound)
             {
-                consecutiveValidationFailures = 0;
+                LastError = null;
 
-                var isValid = response.StatusCode == HttpStatusCode.OK;
-                validationCache[key] = isValid;
-
-                return isValid;
+                return response.StatusCode == HttpStatusCode.OK;
             }
 
-            RegisterValidationFailure($"The dictionary answered {(int)response.StatusCode}.");
+            LastError = $"The dictionary answered {(int)response.StatusCode}.";
 
-            return true;
+            return null;
         }
         catch (Exception exception) when (exception is HttpRequestException or OperationCanceledException)
         {
-            RegisterValidationFailure(DescribeFailure(exception));
+            LastError = DescribeFailure(exception);
 
-            return true;
+            return null;
+        }
+    }
+
+    // Falls back to the language's Wiktionary, asking whether a page for the word
+    // exists. German capitalises nouns but not other words, so both the given
+    // spelling and a capitalised variant are tried before giving up.
+    private async Task<bool?> CheckWiktionaryAsync(string word, string language)
+    {
+        var lowered = word.ToLowerInvariant();
+        var capitalised = char.ToUpperInvariant(lowered[0]) + lowered[1..];
+
+        foreach (var candidate in new[] { lowered, capitalised }.Distinct())
+        {
+            var exists = await CheckWiktionaryPageAsync(candidate, language).ConfigureAwait(false);
+            if (exists is null)
+            {
+                // Wiktionary itself did not answer; a second spelling would not either.
+                return null;
+            }
+
+            if (exists.Value)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    // Looks up a single page title on <language>.wiktionary.org.
+    private async Task<bool?> CheckWiktionaryPageAsync(string title, string language)
+    {
+        try
+        {
+            using var timeout = new CancellationTokenSource(endpoints.ResolveValidationTimeout());
+
+            var url = "https://" + language + ".wiktionary.org/w/api.php" +
+                "?action=query&format=json&formatversion=2&titles=" + Uri.EscapeDataString(title);
+
+            var json = await Client.GetStringAsync(url, timeout.Token).ConfigureAwait(false);
+
+            using var document = JsonDocument.Parse(json);
+            var pages = document.RootElement.GetProperty("query").GetProperty("pages");
+
+            if (pages.GetArrayLength() == 0)
+            {
+                return false;
+            }
+
+            var page = pages[0];
+
+            return !(page.TryGetProperty("missing", out var missing) && missing.GetBoolean());
+        }
+        catch (Exception exception) when (exception is HttpRequestException or OperationCanceledException or JsonException)
+        {
+            return null;
         }
     }
 
