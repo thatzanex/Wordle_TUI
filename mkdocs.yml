@@ -7,14 +7,14 @@ theme:
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default
-      primary: green
+      primary: orange
       accent: orange
       toggle:
         icon: material/brightness-7
         name: Dunkelmodus
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
-      primary: green
+      primary: orange
       accent: orange
       toggle:
         icon: material/brightness-4
@@ -28,9 +28,9 @@ theme:
   features:
     - navigation.instant
     - navigation.tracking
-    - navigation.tabs
-    - navigation.tabs.sticky
+    - navigation.expand
     - navigation.sections
+    - navigation.path
     - navigation.top
     - navigation.footer
     - search.suggest
@@ -38,6 +38,9 @@ theme:
     - content.code.copy
     - content.code.annotate
     - toc.follow
+
+extra_css:
+  - assets/extra.css
 
 markdown_extensions:
   - admonition

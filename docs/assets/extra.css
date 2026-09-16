@@ -1,0 +1,84 @@
+/* WordleApp docs — brand overrides on top of Material for MkDocs.
+   Named "orange" is only the base swatch; these variables pin the
+   exact Wordle-orange hue used across the app's own theme/branding. */
+
+:root {
+  --md-primary-fg-color: #d9822b;
+  --md-primary-fg-color--light: #e8a34f;
+  --md-primary-fg-color--dark: #a8611c;
+  --md-primary-bg-color: #ffffff;
+  --md-primary-bg-color--light: #ffffff;
+
+  --md-accent-fg-color: #c9761f;
+  --md-accent-fg-color--transparent: rgba(217, 130, 43, 0.1);
+  --md-accent-bg-color: #ffffff;
+  --md-accent-bg-color--light: #ffffff;
+
+  --wordle-correct: #538d4e;
+  --wordle-present: #d9822b;
+  --wordle-absent: #3a3a3c;
+}
+
+/* Dark mode keeps the slate ground but the same orange brand hue for
+   links, active nav state and buttons. */
+[data-md-color-scheme="slate"] {
+  --md-primary-fg-color: #e8a34f;
+  --md-primary-fg-color--light: #f0b876;
+  --md-primary-fg-color--dark: #c9761f;
+  --md-accent-fg-color: #f0b876;
+  --md-accent-fg-color--transparent: rgba(240, 184, 118, 0.12);
+  --md-typeset-a-color: #e8a34f;
+}
+
+/* Headings get a small Wordle-tile accent instead of a plain rule */
+.md-content h1,
+.md-content h2 {
+  position: relative;
+  padding-left: 0.9rem;
+}
+
+.md-content h1::before,
+.md-content h2::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.15em;
+  bottom: 0.15em;
+  width: 5px;
+  border-radius: 3px;
+  background: linear-gradient(180deg, var(--wordle-present), var(--wordle-correct));
+}
+
+/* Slightly refined code blocks and tables so the page reads less like
+   raw converted Markdown and more like a designed reference. */
+.md-typeset pre > code {
+  border-radius: 8px;
+}
+
+.md-typeset table:not([class]) {
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.md-typeset table:not([class]) th {
+  background-color: var(--md-primary-fg-color);
+  color: #fff;
+}
+
+.md-typeset .admonition,
+.md-typeset details {
+  border-radius: 8px;
+  border-inline-start-width: 4px;
+}
+
+/* Logo mark: reuse the tile favicon as a small badge next to the site title */
+.md-header__title,
+.md-nav__title {
+  font-weight: 600;
+}
+
+.md-typeset a {
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
