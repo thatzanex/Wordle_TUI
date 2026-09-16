@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WordleApp Slides</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* ============================================================
+     WordleApp Slides — deliberately single-theme "terminal" deck.
+     The subject is a console app; the deck is staged as the
+     terminal it actually runs in. Palette, chrome and type all
+     derive from that one committed world.
+     ============================================================ */
+
+  :root {
+    --bg: #0c0c0d;
+    --surface: #19191b;
+    --surface-2: #222225;
+    --border: #2e2e31;
+    --border-soft: #232326;
+    --text: #f0f0ee;
+    --text-muted: #9a9a9d;
+    --text-faint: #5c5c60;
+    --correct: #538d4e;
+    --correct-bright: #6aaa64;
+    --present: #b59f3b;
+    --present-bright: #c9b458;
+    --absent: #3a3a3c;
+    --accent: #6aaa64;
+    --focus: #c9b458;
+    --font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+    --font-body: 'Inter', -apple-system, 'Segoe UI', sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    height: 100%;
+    margin: 0;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: clamp(10px, 3vw, 32px) 16px;
+    padding-block: clamp(10px, 3vw, 32px);
+    gap: 14px;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    /* faint ambient wash behind the terminal window */
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background:
+      radial-gradient(60% 50% at 50% 0%, rgba(83, 141, 78, 0.10), transparent 60%),
+      var(--bg);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+    border-radius: 3px;
+  }
+
+  /* ---------------- terminal window chrome ---------------- */
+
+  .terminal {
+    width: min(100%, 980px);
+    aspect-ratio: 16 / 10;
+    max-height: calc(100vh - 40px);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    box-shadow: 0 30px 60px -20px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255,255,255,0.02) inset;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .titlebar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--border);
+    flex: none;
+  }
+
+  .titlebar .dots { display: flex; gap: 7px; }
+  .titlebar .dot { width: 11px; height: 11px; border-radius: 50%; }
+  .titlebar .dot.absent { background: var(--absent); }
+  .titlebar .dot.present { background: var(--present); }
+  .titlebar .dot.correct { background: var(--correct); }
+
+  .titlebar .path {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--text-faint);
+    letter-spacing: 0.02em;
+    margin-inline: auto;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .titlebar .path .user { color: var(--correct-bright); }
+  .titlebar .path .path-sep { color: var(--text-faint); }
+  .titlebar .path .cmd { color: var(--present-bright); }
+
+  /* subtle scanline texture over the whole window */
+  .terminal::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: repeating-linear-gradient(
+      to bottom,
+      rgba(255, 255, 255, 0.012) 0px,
+      rgba(255, 255, 255, 0.012) 1px,
+      transparent 1px,
+      transparent 3px
+    );
+    mix-blend-mode: overlay;
+  }
+
+  .deck-viewport {
+    position: relative;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  .deck-track {
+    display: flex;
+    height: 100%;
+    width: 100%;
+    transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: transform;
+  }
+
+  .slide {
+    flex: 0 0 100%;
+    width: 100%;
+    height: 100%;
+    padding: clamp(20px, 4vw, 48px) clamp(22px, 5.5vw, 64px);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: clamp(10px, 1.6vw, 18px);
+  }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--correct-bright);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .eyebrow::before { content: "❯"; color: var(--present-bright); }
+
+  h1.slide-title, h2.slide-title {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: clamp(1.25rem, 2.6vw, 1.9rem);
+    margin: 0;
+    text-wrap: balance;
+    color: var(--text);
+    letter-spacing: -0.01em;
+  }
+
+  p.lede {
+    font-size: clamp(0.86rem, 1.4vw, 1rem);
+    line-height: 1.6;
+    color: var(--text-muted);
+    max-width: 62ch;
+    margin: 0;
+  }
+
+  strong { color: var(--correct-bright); font-weight: 600; }
+
+  ul.feature-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    max-width: 68ch;
+  }
+
+  ul.feature-list li {
+    display: flex;
+    gap: 10px;
+    font-size: clamp(0.82rem, 1.3vw, 0.94rem);
+    line-height: 1.5;
+    color: var(--text);
+  }
+
+  ul.feature-list li::before {
+    content: "›";
+    font-family: var(--font-mono);
+    color: var(--present-bright);
+    font-weight: 700;
+    flex: none;
+  }
+
+  /* ---------------- feature grid (tags instead of emoji) ---------------- */
+
+  .feature-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+
+  .feature-card {
+    background: var(--surface-2);
+    border: 1px solid var(--border-soft);
+    border-radius: 8px;
+    padding: 14px 14px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .feature-tag {
+    align-self: flex-start;
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.08em;
+    color: var(--bg);
+    background: var(--correct-bright);
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-weight: 700;
+  }
+
+  .feature-card h3 {
+    margin: 0;
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .feature-card p {
+    margin: 0;
+    font-size: 0.76rem;
+    line-height: 1.5;
+    color: var(--text-muted);
+  }
+
+  /* ---------------- data tables ---------------- */
+
+  .table-wrap { overflow-x: auto; max-width: 100%; }
+
+  table.deck-table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: clamp(0.72rem, 1.2vw, 0.84rem);
+  }
+
+  table.deck-table th {
+    font-family: var(--font-mono);
+    text-align: left;
+    font-weight: 600;
+    color: var(--present-bright);
+    border-bottom: 1px solid var(--border);
+    padding: 7px 12px 7px 0;
+    white-space: nowrap;
+  }
+
+  table.deck-table td {
+    padding: 8px 12px 8px 0;
+    border-bottom: 1px solid var(--border-soft);
+    color: var(--text-muted);
+    vertical-align: top;
+  }
+
+  table.deck-table td:first-child, table.deck-table th:first-child {
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-weight: 600;
+  }
+
+  table.deck-table tr:last-child td { border-bottom: none; }
+
+  /* ---------------- quote / callout ---------------- */
+
+  .callout {
+    border-left: 3px solid var(--present-bright);
+    background: var(--surface-2);
+    padding: 10px 14px;
+    border-radius: 0 6px 6px 0;
+    font-size: 0.8rem;
+    line-height: 1.55;
+    color: var(--text);
+    max-width: 62ch;
+  }
+
+  .callout cite {
+    display: block;
+    margin-top: 6px;
+    font-style: normal;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    color: var(--text-faint);
+  }
+
+  /* ---------------- code / ascii blocks ---------------- */
+
+  pre.term-block {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 12px 16px;
+    font-family: var(--font-mono);
+    font-size: clamp(0.62rem, 1.15vw, 0.78rem);
+    line-height: 1.55;
+    color: var(--text-muted);
+    overflow-x: auto;
+    max-width: 100%;
+    margin: 0;
+  }
+
+  pre.term-block .k { color: var(--correct-bright); }
+  pre.term-block .v { color: var(--present-bright); }
+  pre.term-block .c { color: var(--text-faint); }
+
+  /* ---------------- tile components ---------------- */
+
+  .tile-row { display: flex; gap: 6px; }
+
+  .tile {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    width: clamp(1.7rem, 3vw, 2.2rem);
+    height: clamp(1.7rem, 3vw, 2.2rem);
+    font-size: clamp(0.85rem, 1.6vw, 1.05rem);
+  }
+
+  .tile.correct { background: var(--correct); }
+  .tile.present { background: var(--present); }
+  .tile.absent { background: var(--absent); }
+
+  .tile-example {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: var(--surface-2);
+    border: 1px solid var(--border-soft);
+    border-radius: 8px;
+    padding: 14px 16px;
+    max-width: fit-content;
+  }
+
+  .tile-example .row-label {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    color: var(--text-faint);
+    width: 5.5ch;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .tile-example .row { display: flex; align-items: center; gap: 10px; }
+
+  /* ---------------- hero (slide 1) ---------------- */
+
+  .hero-slide { align-items: flex-start; justify-content: center; }
+
+  .hero-tiles { display: flex; gap: 8px; margin-bottom: 4px; }
+
+  .hero-tiles .tile {
+    width: clamp(2.4rem, 6vw, 3.6rem);
+    height: clamp(2.4rem, 6vw, 3.6rem);
+    font-size: clamp(1.3rem, 3vw, 1.9rem);
+    transform-origin: center 60%;
+    animation: flipin 0.55s ease both;
+  }
+
+  .hero-tiles .tile:nth-child(1) { animation-delay: 0.05s; }
+  .hero-tiles .tile:nth-child(2) { animation-delay: 0.16s; }
+  .hero-tiles .tile:nth-child(3) { animation-delay: 0.27s; }
+  .hero-tiles .tile:nth-child(4) { animation-delay: 0.38s; }
+  .hero-tiles .tile:nth-child(5) { animation-delay: 0.49s; }
+  .hero-tiles .tile:nth-child(6) { animation-delay: 0.60s; }
+
+  @keyframes flipin {
+    0%   { transform: rotateX(100deg); opacity: 0; }
+    55%  { transform: rotateX(-14deg); opacity: 1; }
+    100% { transform: rotateX(0deg); }
+  }
+
+  .hero-slide .lede { font-size: clamp(0.9rem, 1.6vw, 1.05rem); }
+
+  .hero-meta {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    color: var(--text-faint);
+    letter-spacing: 0.02em;
+  }
+
+  .hero-meta .sep { color: var(--present-bright); margin: 0 8px; }
+
+  .cursor {
+    display: inline-block;
+    width: 0.55em;
+    height: 1.05em;
+    background: var(--correct-bright);
+    vertical-align: -0.18em;
+    margin-left: 2px;
+    animation: blink 1.1s steps(1) infinite;
+  }
+
+  @keyframes blink { 50% { opacity: 0; } }
+
+  .hero-hint {
+    margin-top: 10px;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--text-faint);
+  }
+
+  /* ---------------- closing slide ---------------- */
+
+  .closing-code {
+    max-width: 34ch;
+  }
+
+  /* ---------------- controls ---------------- */
+
+  .controls {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 10px 16px;
+    background: var(--surface-2);
+    border-top: 1px solid var(--border);
+    font-family: var(--font-mono);
+  }
+
+  .nav-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    padding: 5px 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    transition: background 0.15s ease, border-color 0.15s ease;
+  }
+
+  .nav-btn:hover:not(:disabled) { background: var(--surface-2); border-color: var(--correct-bright); }
+  .nav-btn:disabled { opacity: 0.35; cursor: default; }
+
+  .counter {
+    font-size: 0.76rem;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+    min-width: 5.5ch;
+    text-align: center;
+  }
+
+  .progress-dots {
+    display: flex;
+    gap: 5px;
+    margin-inline: auto;
+  }
+
+  .progress-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 2px;
+    border: 1px solid var(--border);
+    background: transparent;
+    cursor: pointer;
+    padding: 0;
+    transition: background 0.15s ease, border-color 0.15s ease;
+  }
+
+  .progress-dot.visited { background: var(--absent); border-color: var(--absent); }
+  .progress-dot.current { background: var(--correct-bright); border-color: var(--correct-bright); }
+
+  .hints {
+    display: none;
+  }
+
+  @media (min-width: 720px) {
+    .hints {
+      display: block;
+      font-size: 0.68rem;
+      color: var(--text-faint);
+      white-space: nowrap;
+    }
+    .hints kbd {
+      font-family: var(--font-mono);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 1px 5px;
+      color: var(--text-muted);
+    }
+  }
+
+  /* ---------------- responsive ---------------- */
+
+  @media (max-width: 640px) {
+    .feature-grid { grid-template-columns: 1fr 1fr; }
+    .terminal { aspect-ratio: 3 / 4.4; }
+    .titlebar .path { display: none; }
+    .progress-dots { gap: 4px; }
+    .progress-dot { width: 7px; height: 7px; }
+  }
+
+  @media (max-width: 420px) {
+    .feature-grid { grid-template-columns: 1fr; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hero-tiles .tile { animation: none; }
+    .cursor { animation: none; }
+    .deck-track { transition: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="terminal" role="region" aria-roledescription="presentation" aria-label="WordleApp Slides">
+  <div class="titlebar">
+    <div class="dots"><span class="dot absent"></span><span class="dot present"></span><span class="dot correct"></span></div>
+    <div class="path"><span class="user">guest@wordleapp</span><span class="path-sep">:~/presentation$</span> <span class="cmd">./slides --present</span></div>
+  </div>
+
+  <div class="deck-viewport">
+    <div class="deck-track" id="track">
+
+      <!-- 1 : HERO -->
+      <section class="slide hero-slide" role="group" aria-roledescription="slide" aria-label="1 von 12">
+        <div class="hero-tiles" aria-hidden="true">
+          <div class="tile absent">W</div>
+          <div class="tile present">O</div>
+          <div class="tile absent">R</div>
+          <div class="tile correct">D</div>
+          <div class="tile present">L</div>
+          <div class="tile correct">E</div>
+        </div>
+        <p class="lede">Ein ästhetischer Wordle-Klon als Terminal User Interface.</p>
+        <div class="hero-meta">C#<span class="sep">·</span>.NET 8<span class="sep">·</span>Spectre.Console</div>
+        <div class="hero-hint">weiter mit <kbd style="font-family:var(--font-mono);border:1px solid var(--border);border-radius:3px;padding:1px 5px;">→</kbd><span class="cursor"></span></div>
+      </section>
+
+      <!-- 2 : ÜBERBLICK -->
+      <section class="slide" role="group" aria-roledescription="slide" aria-label="2 von 12">
+        <div class="eyebrow">01 · Überblick</div>
+        <h2 class="slide-title">Was ist WordleApp?</h2>
+        <p class="lede"><strong>WordleApp</strong> ist ein vollständiger Klon des Spiels <em>Wordle</em>, gebaut als Terminal&nbsp;User&nbsp;Interface in C#&nbsp;/&nbsp;.NET&nbsp;8. Läuft komplett in der Konsole — dank Spectre.Console sieht es trotzdem poliert aus.</p>
+        <ul class="feature-list">
+          <li>Figlet-Banner, abgerundete Panels, farbige Kacheln, Ladeanimation</li>
+          <li><strong>Zwei Sprachen</strong> (Deutsch/Englisch), beliebig erweiterbar per JSON</li>
+          <li><strong>Drei Schwierigkeitsgrade</strong> mit eigenen Regeln &amp; Punktemultiplikatoren</li>
+          <li><strong>Externe Wortquelle</strong> über eine Zufallswort-API + optionale Wörterbuch-Validierung</li>
+          <li><strong>Persistente</strong> Einstellungen &amp; Bestenliste in JSON-Dateien</li>
+          <li><strong>Adaptives Layout</strong>, das sich live an die Terminalgröße anpasst</li>
+        </ul>
+      </section>
+
+      <!-- 3 : KERN-FEATURES -->
+      <section class="slide" role="group" aria-roledescription="slide" aria-label="3 von 12">
+        <div class="eyebrow">02 · Kern-Features</div>
+        <h2 class="slide-title">Sechs tragende Eigenschaften</h2>
+        <div class="feature-grid">
+          <div class="feature-card"><span class="feature-tag">MODE</span><h3>Spielmodi</h3><p>Easy / Normal / Hard — unterschiedliche Regeln &amp; Punktemultiplikatoren</p></div>
+          <div class="feature-card"><span class="feature-tag">LANG</span><h3>Mehrsprachig</h3><p>Deutsch &amp; Englisch, neue Sprachen ohne Codeänderung</p></div>
+          <div class="feature-card"><span class="feature-tag">RANK</span><h3>Bestenliste</h3><p>Kumulierte Statistik pro Spieler — Siege, Streak, Bestzeit</p></div>
+          <div class="feature-card"><span class="feature-tag">UI</span><h3>Adaptive UI</h3><p>Kachelgröße &amp; Layout passen sich live an die Fenstergröße an</p></div>
+          <div class="feature-card"><span class="feature-tag">NET</span><h3>Live-Wortquelle</h3><p>Zufallswort-API + optionale Wörterbuch-Validierung</p></div>
+          <div class="feature-card"><span class="feature-tag">CFG</span><h3>Konfigurierbar</h3><p>Farben, Rundenlänge, API-Endpunkte über <code style="font-family:var(--font-mono);">config.json</code></p></div>
+        </div>
+      </section>
+
+      <!-- 4 : ARCHITEKTUR -->
+      <section class="slide" role="group" aria-roledescription="slide" aria-label="4 von 12">
+        <div class="eyebrow">03 · Architektur</div>
+        <h2 class="slide-title">Strikte Schichtentrennung</h2>
+        <div class="table-wrap">
+          <table class="deck-table">
+            <thead><tr><th>Schicht</th><th>Ordner</th><th>Zuständigkeit</th><th>Konsole</th></tr></thead>
+            <tbody>
+              <tr><td>Models</td><td>Models/</td><td>Reine Datenstrukturen, keine Logik</td><td>Nein</td></tr>
+              <tr><td>Core</td><td>Core/</td><td>Spielregeln, Zustandsmaschinen, Menüsteuerung</td><td>Nein</td></tr>
+              <tr><td>Services</td><td>Services/</td><td>Dateizugriff, HTTP, Übersetzung</td><td>Nein</td></tr>
+              <tr><td>UI</td><td>UI/</td><td>Einzige Schicht mit Spectre.Console</td><td><strong>Ja, exklusiv</strong></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">
+          „Never mix console output with game logic. All drawing must happen in <code style="font-family:var(--font-mono);">FrontendRenderer.cs</code>.“
+          <cite>— Projekt-Leitprinzip</cite>
+        </div>
+      </section>
+
+      <!-- 5 : LIFECYCLE -->
+      <section class="slide" role="group" aria-roledescription="slide" aria-label="5 von 12">
+        <div class="eyebrow">04 · Programmablauf</div>
+        <h2 class="slide-title">Lifecycle</h2>
+        <pre class="term-block"><span class="k">Program.Main()</span>
+  ├─ ConfigService.Load()            <span class="c">→ GameConfig</span>
+  ├─ LocalizationService(...)
+  ├─ ConsoleSession.Start()          <span class="c">→ Terminal vorbereiten</span>
+  └─ <span class="k">AppShell.Run()</span>
+       ├─ WaitForUsableWindow()
+       ├─ WordPool.WarmUp(...)       <span class="c">→ Wörter im Hintergrund vorladen</span>
+       ├─ DrawLoadingScreen()
+       └─ <span class="v">RunMainMenu()</span>  <span class="c">← Schleife</span>
+            ├─ Play        → WordleGame.Run(level)
+            ├─ Leaderboard
+            ├─ How to Play
+            └─ Settings</pre>
+        <p class="lede" style="font-size:0.78rem;">Kein DI-Framework — alle Abhängigkeiten werden von Hand in <code style="font-family:var(--font-mono);">Program.cs</code> verdrahtet.</p>
+      </section>
+
+      <!-- 6 : WORDEVALUATOR -->
+      <section class="slide" role="group" aria-roledescription="slide" aria-label="6 von 12">
+        <div class="eyebrow">05 · Kernlogik</div>
+        <h2 class="slide-title">WordEvaluator — der Doppelbuchstaben-Fall</h2>
+        <p class="lede" style="font-size:0.8rem;">Enthält das Zielwort einen Buchstaben nur einmal, der Guess ihn aber mehrfach, darf nur <strong>eine</strong> Stelle als „vorhanden“ markiert werden. Lösung: ein Zwei-Durchlauf-Algorithmus.</p>
+        <ul class="feature-list" style="font-size:0.8rem;">
+          <li><strong>Pass 1</strong> — alle exakten Treffer (grün) markieren &amp; Zielbuchstaben „verbrauchen“</li>
+          <li><strong>Pass 2</strong> — für jeden Rest: kommt der Buchstabe woanders im noch nicht verbrauchten Zielwort vor? → gelb, sonst grau</li>
+        </ul>
+        <div class="tile-example">
+          <div class="row"><span class="row-label">Ziel</span>
+            <div class="tile-row"><div class="tile absent">G</div><div class="tile absent">H</div><div class="tile absent">O</div><div class="tile absent">S</div><div class="tile absent">T</div></div>
+          </div>
+          <div class="row"><span class="row-label">Guess</span>
+            <div class="tile-row"><div class="tile absent">S</div><div class="tile absent">A</div><div class="tile absent">S</div><div class="tile correct">S</div><div class="tile absent">Y</div></div>
+          </div>
+        </div>
+        <p class="lede" style="font-size:0.74rem;">Nur eine der drei S-Positionen wird als Treffer gewertet — bestimmt durch den Algorithmus, nicht durch Lesereihenfolge.</p>
+      </section>
+
+      <!-- 7 : PUNKTEBERECHNUNG -->
+      <section class="slide" role="group" aria-roledescription="slide" aria-label="7 von 12">
+        <div class="eyebrow">06 · Scoring</div>
+        <h2 class="slide-title">Punkteberechnung</h2>
+        <ul class="feature-list">
+          <li><strong>Grundpunkte fürs Gewinnen</strong> — 1000 (nur bei Sieg)</li>
+          <li><strong>Bonus für ungenutzte Versuche</strong> — 150 pro übrigem Versuch</li>
+          <li><strong>Geschwindigkeitsbonus</strong> — linear von 600 auf 0 über die ersten 120s</li>
+        </ul>
+        <div class="table-wrap">
+          <table class="deck-table" style="max-width:36ch;">
+            <thead><tr><th>Schwierigkeit</th><th>Multiplikator</th></tr></thead>
+            <tbody>
+              <tr><td>Easy</td><td>0,75×</td></tr>
+              <tr><td>Normal</td><td>1,0×</td></tr>
+              <tr><td>Hard</td><td>1,5×</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="lede" style="font-size:0.78rem;">Eine verlorene Runde ist <strong>immer 0 Punkte</strong>, unabhängig von investierter Zeit.</p>
+      </section>
+
+      <!-- 8 : DICTIONARY API -->
+      <section class="slide" role="group" aria-roledescription="slide" aria-label="8 von 12">
+        <div class="eyebrow">07 · Externe Anbindung</div>
+        <h2 class="slide-title">DictionaryApiService</h2>
+        <p class="lede" style="font-size:0.8rem;">Zwei HTTP-Aufrufe, behandelt als <strong>unzuverlässig und langsam</strong>: eine Random-Word-API für Zielwörter (im Hintergrund vorgeladen) und eine Dictionary-API zur Validierung.</p>
+        <ul class="feature-list" style="font-size:0.8rem;">
+          <li><strong>Eigene, enge Timeouts</strong> pro Anfrage</li>
+          <li><strong>„Fails open“</strong> — nur ein explizites 404 lehnt einen Guess ab; Timeouts/Fehler lassen ihn durch</li>
+          <li>Nach <strong>2 Fehlschlägen</strong> wird die Validierung für die Sitzung deaktiviert</li>
+          <li>Antworten werden <strong>gecacht</strong> — kein Wort wird zweimal abgefragt</li>
+        </ul>
+      </section>
+
+      <!-- 9 : ADAPTIVE DARSTELLUNG -->
+      <section class="slide" role="group" aria-roledescription="slide" aria-label="9 von 12">
+        <div class="eyebrow">08 · Rendering</div>
+        <h2 class="slide-title">Adaptive Darstellung</h2>
+        <p class="lede" style="font-size:0.8rem;"><code style="font-family:var(--font-mono);">FrontendRenderer.cs</code> — die einzige Klasse, die Spectre.Console direkt nutzt (&gt;1100 Zeilen).</p>
+        <ul class="feature-list" style="font-size:0.8rem;">
+          <li><strong>Adaptive Kachelgröße</strong> — 6 Qualitätsstufen, größtmögliche Kachel wird gewählt</li>
+          <li><strong>Live-Neuberechnung</strong> bei Fenstergrößenänderung (Resize-Polling alle 40ms)</li>
+          <li><strong>„Shimmer“-Animation</strong> — graue Welle über die aktive Zeile während der Wörterbuch-Prüfung</li>
+          <li><strong>Fallback ohne Farbunterstützung</strong> — Klammer-Notation <code style="font-family:var(--font-mono);">[[W]]</code> / <code style="font-family:var(--font-mono);">(O)</code> / <code style="font-family:var(--font-mono);">X</code></li>
+          <li><strong>Markup-Escaping</strong> — Spielernamen werden immer escaped</li>
+        </ul>
+      </section>
+
+      <!-- 10 : KONFIGURATION & ROBUSTHEIT -->
+      <section class="slide" role="group" aria-roledescription="slide" aria-label="10 von 12">
+        <div class="eyebrow">09 · Robustheit</div>
+        <h2 class="slide-title">Konfiguration &amp; Robustheit</h2>
+        <p class="lede" style="font-size:0.78rem;"><strong>Durchgängiges Prinzip:</strong> Nichts darf das Spiel zum Absturz bringen.</p>
+        <div class="table-wrap">
+          <table class="deck-table">
+            <thead><tr><th>Situation</th><th>Verhalten</th></tr></thead>
+            <tbody>
+              <tr><td>config.json fehlt/kaputt</td><td>Standardwerte</td></tr>
+              <tr><td>API nicht erreichbar</td><td>Fehlermeldung bzw. Validierung deaktiviert</td></tr>
+              <tr><td>Terminal zu klein</td><td>Eigener Hinweisbildschirm</td></tr>
+              <tr><td>Keine Farbunterstützung</td><td>Klammer-Notation</td></tr>
+              <tr><td>Absturz / Strg+C</td><td>Cursor &amp; Farben werden wiederhergestellt</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 11 : GRENZEN -->
+      <section class="slide" role="group" aria-roledescription="slide" aria-label="11 von 12">
+        <div class="eyebrow">10 · Ausblick</div>
+        <h2 class="slide-title">Bekannte Grenzen</h2>
+        <ul class="feature-list">
+          <li><strong>Keine automatisierten Tests</strong> (Schlüsselmethoden sind aber bewusst <code style="font-family:var(--font-mono);">virtual</code> und damit testbar designt)</li>
+          <li><strong>Kein Multiplayer</strong>, keine Online-Bestenliste — rein lokal</li>
+          <li><strong>Kein täglicher Modus</strong> — jedes Zielwort ist zufällig</li>
+          <li><strong>Reine Flatfile-Persistenz</strong> (JSON) statt Datenbank — für den Anwendungsfall ausreichend</li>
+        </ul>
+      </section>
+
+      <!-- 12 : DANKE -->
+      <section class="slide hero-slide" role="group" aria-roledescription="slide" aria-label="12 von 12">
+        <div class="tile-row" aria-hidden="true" style="margin-bottom:6px;">
+          <div class="tile correct">D</div><div class="tile present">A</div><div class="tile absent">N</div><div class="tile correct">K</div><div class="tile present">E</div>
+        </div>
+        <p class="lede">Vollständige technische Dokumentation im Repository unter <strong>docs/</strong> (MkDocs-Seite).</p>
+        <pre class="term-block closing-code"><span class="c">$</span> <span class="k">cd</span> WordleApp
+<span class="c">$</span> <span class="k">dotnet</span> run</pre>
+      </section>
+
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="nav-btn" id="prevBtn" aria-label="Vorherige Folie">←&nbsp;prev</button>
+    <div class="counter" id="counter">01 / 12</div>
+    <div class="progress-dots" id="dots"></div>
+    <span class="hints"><kbd>←</kbd> <kbd>→</kbd> navigieren · <kbd>Home</kbd>/<kbd>End</kbd> springen</span>
+    <button class="nav-btn" id="nextBtn" aria-label="Nächste Folie">next&nbsp;→</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  var track = document.getElementById('track');
+  var slides = Array.prototype.slice.call(track.children);
+  var total = slides.length;
+  var counter = document.getElementById('counter');
+  var prevBtn = document.getElementById('prevBtn');
+  var nextBtn = document.getElementById('nextBtn');
+  var dotsWrap = document.getElementById('dots');
+  var index = 0;
+
+  for (var i = 0; i < total; i++) {
+    var dot = document.createElement('button');
+    dot.className = 'progress-dot';
+    dot.type = 'button';
+    dot.setAttribute('aria-label', 'Folie ' + (i + 1) + ' von ' + total);
+    dot.addEventListener('click', (function (n) { return function () { goTo(n); }; })(i));
+    dotsWrap.appendChild(dot);
+  }
+  var dots = Array.prototype.slice.call(dotsWrap.children);
+
+  function pad(n) { return n < 10 ? '0' + n : '' + n; }
+
+  function render() {
+    track.style.transform = 'translateX(-' + (index * 100) + '%)';
+    counter.textContent = pad(index + 1) + ' / ' + pad(total);
+    prevBtn.disabled = index === 0;
+    nextBtn.disabled = index === total - 1;
+    dots.forEach(function (d, i) {
+      d.classList.toggle('current', i === index);
+      d.classList.toggle('visited', i < index);
+    });
+    slides.forEach(function (s, i) {
+      s.setAttribute('aria-hidden', i === index ? 'false' : 'true');
+    });
+  }
+
+  function goTo(n) {
+    index = Math.max(0, Math.min(total - 1, n));
+    render();
+  }
+
+  prevBtn.addEventListener('click', function () { goTo(index - 1); });
+  nextBtn.addEventListener('click', function () { goTo(index + 1); });
+
+  window.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); goTo(index + 1); }
+    else if (e.key === 'ArrowLeft' || e.key === 'Backspace' || e.key === 'PageUp') { e.preventDefault(); goTo(index - 1); }
+    else if (e.key === 'Home') { e.preventDefault(); goTo(0); }
+    else if (e.key === 'End') { e.preventDefault(); goTo(total - 1); }
+    else if (/^[1-9]$/.test(e.key)) { var n = parseInt(e.key, 10) - 1; if (n < total) goTo(n); }
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

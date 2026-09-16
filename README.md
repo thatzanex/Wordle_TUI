@@ -21,4 +21,5 @@ dotnet run
   ```bash
   npx @marp-team/marp-cli presentation/slides.md --pptx --allow-local-files -o presentation/WordleApp.pptx
   ```
+- **Slide deck** (interactive HTML): [`presentation/slides.html`](presentation/slides.html) — a self-contained, terminal-styled version of the same deck. Open it directly in any browser (no server needed); navigate with the arrow keys, on-screen buttons, or the progress dots.
 - **Original deep-dive** (single file, German): [`documentation.md`](documentation.md) — this is the source the docs site was split from.
