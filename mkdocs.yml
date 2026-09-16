@@ -1,0 +1,74 @@
+site_name: WordleApp Dokumentation
+site_description: Vollständige Projektdokumentation der WordleApp (C# / .NET 8 Terminal-UI Wordle-Klon)
+repo_name: Wordle
+theme:
+  name: material
+  language: de
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: green
+      accent: orange
+      toggle:
+        icon: material/brightness-7
+        name: Dunkelmodus
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: green
+      accent: orange
+      toggle:
+        icon: material/brightness-4
+        name: Hellmodus
+  font:
+    text: Inter
+    code: JetBrains Mono
+  icon:
+    logo: material/keyboard
+  favicon: assets/favicon.svg
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.top
+    - navigation.footer
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+    - toc.follow
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.tabbed:
+      alternate_style: true
+  - tables
+  - toc:
+      permalink: true
+      title: Auf dieser Seite
+
+nav:
+  - Überblick: index.md
+  - Projektstruktur: structure.md
+  - Architektur: architecture.md
+  - Programmablauf: lifecycle.md
+  - Models: models.md
+  - "Core – Spiellogik": core.md
+  - Services: services.md
+  - UI-Schicht: ui.md
+  - Konfiguration: configuration.md
+  - Workflows: workflows.md
+  - "Fehlerbehandlung & Grenzen": robustness.md
+  - Glossar: glossary.md
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/AtlanticFrameworks
